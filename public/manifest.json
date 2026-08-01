@@ -1,0 +1,23 @@
+{
+  "name": "Agenda da Barbearia",
+  "short_name": "Agenda",
+  "description": "Marque seu horário na barbearia",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#14110f",
+  "theme_color": "#14110f",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

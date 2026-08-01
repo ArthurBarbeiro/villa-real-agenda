@@ -1,0 +1,16 @@
+# Configuração para publicar no Render (https://render.com)
+# Obs.: o plano gratuito do Render NÃO tem disco persistente — os agendamentos
+# podem ser zerados a cada novo deploy. Para dados que não se perdem, use o
+# Railway com um "Volume" (veja o DEPLOY.md) ou um disco pago no Render.
+services:
+  - type: web
+    name: villa-real-agenda
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node src/index.js
+    envVars:
+      - key: SEM_BOT
+        value: "1"
+      - key: PUPPETEER_SKIP_DOWNLOAD
+        value: "1"

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#14110f" />
+  <title>Agenda da Barbearia</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="apple-touch-icon" href="icon.png" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <img class="logo-img" src="logo.png" alt="Barbearia Villa Real" />
+      <p id="endereco-barbearia"></p>
+    </header>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="cliente">Agendar</div>
+      <div class="tab" data-tab="barbeiro">Agenda</div>
+    </div>
+
+    <main>
+      <!-- ================= VISÃO CLIENTE ================= -->
+      <section id="view-cliente">
+        <div id="fluxo-cliente"></div>
+      </section>
+
+      <!-- ================= VISÃO BARBEIRO ================= -->
+      <section id="view-barbeiro" class="hidden">
+        <div class="card">
+          <div class="date-nav">
+            <button id="dia-anterior">‹</button>
+            <div class="dia-atual">
+              <span id="dia-label">Hoje</span>
+              <small id="dia-data"></small>
+            </div>
+            <button id="dia-proximo">›</button>
+          </div>
+          <div id="lista-agenda"><div class="loader">Carregando…</div></div>
+        </div>
+        <button class="btn secondary" id="btn-encaixar">+ Encaixar cliente manualmente</button>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="app.js"></script>
+</body>
+</html>

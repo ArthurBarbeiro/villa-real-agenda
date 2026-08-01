@@ -1,0 +1,24 @@
+{
+  "name": "barbearia-agenda",
+  "version": "1.0.0",
+  "description": "Agenda de barbearia (PWA) + bot de WhatsApp para marcar cortes de cabelo",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js",
+    "server": "node src/server.js",
+    "test": "node test/test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "qrcode-terminal": "^0.12.0"
+  },
+  "optionalDependencies": {
+    "whatsapp-web.js": "^1.25.0"
+  },
+  "author": "",
+  "license": "MIT"
+}
