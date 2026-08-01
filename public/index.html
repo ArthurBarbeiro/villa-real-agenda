@@ -29,18 +29,32 @@
 
       <!-- ================= VISÃO BARBEIRO ================= -->
       <section id="view-barbeiro" class="hidden">
-        <div class="card">
-          <div class="date-nav">
-            <button id="dia-anterior">‹</button>
-            <div class="dia-atual">
-              <span id="dia-label">Hoje</span>
-              <small id="dia-data"></small>
-            </div>
-            <button id="dia-proximo">›</button>
-          </div>
-          <div id="lista-agenda"><div class="loader">Carregando…</div></div>
+
+        <!-- Tela de senha (aparece antes de liberar a agenda) -->
+        <div id="barbeiro-lock" class="card">
+          <p class="step-title">🔒 Área do barbeiro</p>
+          <p class="muted">Digite a senha para ver e gerenciar os agendamentos.</p>
+          <label>Senha</label>
+          <input type="password" id="pin-input" inputmode="numeric" placeholder="••••" autocomplete="off" />
+          <button class="btn" id="pin-entrar">Entrar</button>
+          <p id="pin-erro" class="muted hidden" style="color:var(--danger)">Senha incorreta. Tente de novo.</p>
         </div>
-        <button class="btn secondary" id="btn-encaixar">+ Encaixar cliente manualmente</button>
+
+        <!-- Conteúdo da agenda (fica oculto até digitar a senha) -->
+        <div id="barbeiro-conteudo" class="hidden">
+          <div class="card">
+            <div class="date-nav">
+              <button id="dia-anterior">‹</button>
+              <div class="dia-atual">
+                <span id="dia-label">Hoje</span>
+                <small id="dia-data"></small>
+              </div>
+              <button id="dia-proximo">›</button>
+            </div>
+            <div id="lista-agenda"><div class="loader">Carregando…</div></div>
+          </div>
+          <button class="btn secondary" id="btn-encaixar">+ Encaixar cliente manualmente</button>
+        </div>
       </section>
     </main>
   </div>

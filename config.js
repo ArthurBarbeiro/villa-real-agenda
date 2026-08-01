@@ -58,6 +58,12 @@ module.exports = {
   // ---- Servidor ----
   porta: 3000,
 
+  // ---- Senha (PIN) da aba Agenda do barbeiro ----
+  // Só quem tem este PIN consegue ver a lista de agendamentos e cancelar.
+  // O cliente vê apenas a aba "Agendar". Pode ser definido pela variável de
+  // ambiente ADMIN_PIN na hospedagem (recomendado) ou trocado aqui direto.
+  adminPin: process.env.ADMIN_PIN || '2580',
+
   // ---- Mensagens do bot (personalize o tom aqui) ----
   mensagens: {
     // {barbearia} e {barbeiro} são substituídos automaticamente

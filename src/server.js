@@ -17,6 +17,17 @@ function criarApp() {
 
   // ---- API ----
 
+  // Middleware de segurança: exige o PIN do barbeiro no cabeçalho "x-admin-pin".
+  // Protege as rotas que listam e cancelam agendamentos (visão do barbeiro).
+  function exigirPin(req, res, next) {
+    const pin = req.get('x-admin-pin') || req.query.pin;
+    if (pin && String(pin) === String(config.adminPin)) return next();
+    return res.status(401).json({ erro: 'PIN incorreto ou não informado.' });
+  }
+
+  // Endpoint para o app validar o PIN digitado na aba Agenda
+  app.get('/api/admin/verificar', exigirPin, (req, res) => res.json({ ok: true }));
+
   // Informações públicas para o frontend montar a tela
   app.get('/api/config', (req, res) => {
     res.json({
@@ -44,8 +55,8 @@ function criarApp() {
     res.json(booking.horariosDisponiveis(servico, data));
   });
 
-  // Lista de agendamentos (visão do barbeiro). Filtra por ?data= ou ?de=&ate=
-  app.get('/api/agendamentos', (req, res) => {
+  // Lista de agendamentos (visão do barbeiro) — PROTEGIDO por PIN.
+  app.get('/api/agendamentos', exigirPin, (req, res) => {
     const { data, de } = req.query;
     let lista = db.listarAgendamentos({ status: 'confirmado' });
     if (data) {
@@ -65,8 +76,8 @@ function criarApp() {
     res.status(201).json(r.agendamento);
   });
 
-  // Cancela um agendamento
-  app.post('/api/agendamentos/:id/cancelar', (req, res) => {
+  // Cancela um agendamento — PROTEGIDO por PIN.
+  app.post('/api/agendamentos/:id/cancelar', exigirPin, (req, res) => {
     const r = booking.cancelar(req.params.id);
     if (!r.ok) return res.status(404).json({ erro: r.erro });
     res.json(r.agendamento);

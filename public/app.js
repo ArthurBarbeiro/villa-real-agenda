@@ -5,11 +5,14 @@
 
 const API = ''; // mesma origem
 let CONFIG = null;
+let ADMIN_PIN = null; // preenchido quando o barbeiro digita a senha
 
 // ---------- Utilidades ----------
 async function api(caminho, opcoes) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (ADMIN_PIN) headers['x-admin-pin'] = ADMIN_PIN; // envia o PIN nas rotas protegidas
   const r = await fetch(API + caminho, {
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     ...opcoes,
   });
   if (!r.ok) {
@@ -57,9 +60,44 @@ document.querySelectorAll('.tab').forEach((tab) => {
     const alvo = tab.dataset.tab;
     document.getElementById('view-cliente').classList.toggle('hidden', alvo !== 'cliente');
     document.getElementById('view-barbeiro').classList.toggle('hidden', alvo !== 'barbeiro');
-    if (alvo === 'barbeiro') carregarAgenda();
+    if (alvo === 'barbeiro') {
+      if (ADMIN_PIN) carregarAgenda();   // já autenticado
+      else mostrarTelaSenha();           // pede a senha primeiro
+    }
   });
 });
+
+// ---------- Tela de senha (protege a aba Agenda) ----------
+function mostrarTelaSenha() {
+  document.getElementById('barbeiro-lock').classList.remove('hidden');
+  document.getElementById('barbeiro-conteudo').classList.add('hidden');
+  const inp = document.getElementById('pin-input');
+  if (inp) { inp.value = ''; setTimeout(() => inp.focus(), 100); }
+}
+
+async function tentarEntrar() {
+  const inp = document.getElementById('pin-input');
+  const err = document.getElementById('pin-erro');
+  const pin = (inp.value || '').trim();
+  if (!pin) return;
+  ADMIN_PIN = pin; // será usado no cabeçalho da requisição de verificação
+  try {
+    await api('/api/admin/verificar');
+    // sucesso: libera a agenda
+    err.classList.add('hidden');
+    document.getElementById('barbeiro-lock').classList.add('hidden');
+    document.getElementById('barbeiro-conteudo').classList.remove('hidden');
+    carregarAgenda();
+  } catch (e) {
+    ADMIN_PIN = null; // senha errada
+    err.classList.remove('hidden');
+    inp.value = '';
+    inp.focus();
+  }
+}
+
+document.getElementById('pin-entrar').addEventListener('click', tentarEntrar);
+document.getElementById('pin-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') tentarEntrar(); });
 
 // ============================================================================
 //  FLUXO DO CLIENTE (marcar horário)
