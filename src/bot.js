@@ -8,6 +8,7 @@
 //  bloquear números que enviam muitas mensagens automáticas. Use com bom senso.
 // ============================================================================
 
+const fs = require('fs');
 const path = require('path');
 const qrcode = require('qrcode-terminal');
 const config = require('../config');
@@ -35,20 +36,23 @@ function pastaAuth() {
   return path.join(base, '.wwebjs_auth');
 }
 
-function iniciarBot() {
-  // Carrega whatsapp-web.js só aqui dentro para o resto do projeto rodar
-  // (testes, servidor) mesmo sem essa dependência instalada.
-  let Client, LocalAuth;
-  try {
-    ({ Client, LocalAuth } = require('whatsapp-web.js'));
-  } catch (e) {
-    console.error('\n⚠️  whatsapp-web.js não está instalado. Rode "npm install" antes.\n');
-    botState.definir({ status: 'desligado' });
-    return null;
+// Remove arquivos de "trava" do Chromium que podem sobrar de um container
+// anterior (causam o erro "profile appears to be in use by another process").
+function limparTravas() {
+  const alvos = ['SingletonLock', 'SingletonSocket', 'SingletonCookie', 'DevToolsActivePort'];
+  function varrer(dir) {
+    let itens = [];
+    try { itens = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return; }
+    for (const it of itens) {
+      const p = path.join(dir, it.name);
+      if (it.isDirectory()) varrer(p);
+      else if (alvos.includes(it.name)) { try { fs.unlinkSync(p); } catch (_) {} }
+    }
   }
+  varrer(pastaAuth());
+}
 
-  botState.definir({ status: 'iniciando', qr: null });
-
+function montarClient(Client, LocalAuth) {
   const puppeteer = {
     headless: true,
     args: [
@@ -56,9 +60,10 @@ function iniciarBot() {
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
+      '--no-first-run',
+      '--no-default-browser-check',
     ],
   };
-  // Em servidores, usamos o Chromium do sistema (definido por variável de ambiente).
   if (process.env.PUPPETEER_EXECUTABLE_PATH) {
     puppeteer.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
   }
@@ -71,7 +76,7 @@ function iniciarBot() {
   client.on('qr', (qr) => {
     botState.definir({ status: 'qr', qr });
     console.log('\n📱 Novo QR Code gerado. Abra a tela "Conexão do WhatsApp" no app para escanear.');
-    qrcode.generate(qr, { small: true }); // também mostra no terminal, por conveniência
+    qrcode.generate(qr, { small: true });
   });
 
   client.on('authenticated', () => {
@@ -97,31 +102,60 @@ function iniciarBot() {
 
   client.on('message', async (msg) => {
     try {
-      // Ignora grupos, status e mensagens do próprio número
       if (msg.from.endsWith('@g.us') || msg.from === 'status@broadcast') return;
       if (msg.fromMe) return;
-
-      const telefone = msg.from; // ex.: "5511999999999@c.us"
+      const telefone = msg.from;
       const texto = msg.body || '';
-
       const sessao = db.obterSessao(telefone);
       const { reply, session } = handleMessage(sessao, texto, telefone, api, new Date());
-
       if (session) db.salvarSessao(telefone, session);
       else db.limparSessao(telefone);
-
       if (reply) await msg.reply(reply);
     } catch (e) {
       console.error('[bot] Erro ao processar mensagem:', e);
     }
   });
 
-  client.initialize().catch((e) => {
-    console.error('[bot] Erro ao inicializar:', e.message);
-    botState.definir({ status: 'desconectado', qr: null });
-  });
-
   return client;
+}
+
+function iniciarBot() {
+  let Client, LocalAuth;
+  try {
+    ({ Client, LocalAuth } = require('whatsapp-web.js'));
+  } catch (e) {
+    console.error('\n⚠️  whatsapp-web.js não está instalado. Rode "npm install" antes.\n');
+    botState.definir({ status: 'desligado' });
+    return null;
+  }
+
+  let tentativa = 0;
+  const MAX = 8;
+
+  async function tentar() {
+    tentativa++;
+    botState.definir({ status: 'iniciando', qr: null });
+    limparTravas(); // remove locks de container anterior
+    const client = montarClient(Client, LocalAuth);
+    try {
+      await client.initialize();
+    } catch (e) {
+      console.error(`[bot] Erro ao inicializar (tentativa ${tentativa}/${MAX}):`, e.message);
+      try { await client.destroy(); } catch (_) {}
+      if (tentativa < MAX) {
+        const espera = Math.min(5000 * tentativa, 30000);
+        console.log(`[bot] Tentando de novo em ${Math.round(espera / 1000)}s…`);
+        botState.definir({ status: 'iniciando', qr: null });
+        setTimeout(tentar, espera);
+      } else {
+        console.error('[bot] Não consegui iniciar o WhatsApp após várias tentativas.');
+        botState.definir({ status: 'desconectado', qr: null });
+      }
+    }
+  }
+
+  tentar();
+  return true;
 }
 
 if (require.main === module) {
