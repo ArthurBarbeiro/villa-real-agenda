@@ -1,16 +1,15 @@
 // ============================================================================
-//  BOT DE WHATSAPP (whatsapp-web.js)
-//  Conecta no WhatsApp do barbeiro via QR Code e responde os clientes,
-//  marcando os horários no MESMO banco que a agenda usa.
+//  BOT DE WHATSAPP (Baileys)
+//  Conecta no WhatsApp do barbeiro e responde os clientes, marcando os
+//  horários no MESMO banco que a agenda usa.
 //
-//  Importante: usa uma biblioteca NÃO-oficial (whatsapp-web.js), que controla
-//  o WhatsApp Web. Funciona bem para um negócio pequeno, mas a Meta pode
-//  bloquear números que enviam muitas mensagens automáticas. Use com bom senso.
+//  Usa o Baileys, que fala DIRETO com o WhatsApp (sem navegador/Chromium).
+//  É mais leve e estável em servidor. Ainda é uma solução não-oficial, então
+//  use com bom senso (a Meta pode bloquear números com muito disparo automático).
 // ============================================================================
 
 const fs = require('fs');
 const path = require('path');
-const qrcode = require('qrcode-terminal');
 const config = require('../config');
 const booking = require('./booking');
 const db = require('./db');
@@ -30,145 +29,116 @@ const api = {
 };
 
 // Onde guardar a sessão do WhatsApp (para não precisar reescanear o QR).
-// Usa o DATA_DIR (disco persistente na hospedagem) quando definido.
 function pastaAuth() {
   const base = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
-  return path.join(base, '.wwebjs_auth');
+  return path.join(base, 'baileys_auth');
 }
 
-// Remove arquivos de "trava" do Chromium que podem sobrar de um container
-// anterior (causam o erro "profile appears to be in use by another process").
-function limparTravas() {
-  const alvos = ['SingletonLock', 'SingletonSocket', 'SingletonCookie', 'DevToolsActivePort'];
-  function varrer(dir) {
-    let itens = [];
-    try { itens = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return; }
-    for (const it of itens) {
-      const p = path.join(dir, it.name);
-      if (it.isDirectory()) varrer(p);
-      else if (alvos.includes(it.name)) { try { fs.unlinkSync(p); } catch (_) {} }
-    }
-  }
-  varrer(pastaAuth());
+// Extrai o texto de vários formatos de mensagem do WhatsApp
+function textoDaMensagem(m) {
+  const msg = m.message || {};
+  return (
+    msg.conversation ||
+    (msg.extendedTextMessage && msg.extendedTextMessage.text) ||
+    (msg.imageMessage && msg.imageMessage.caption) ||
+    (msg.videoMessage && msg.videoMessage.caption) ||
+    (msg.buttonsResponseMessage && msg.buttonsResponseMessage.selectedDisplayText) ||
+    (msg.listResponseMessage && msg.listResponseMessage.title) ||
+    ''
+  );
 }
 
-function montarClient(Client, LocalAuth) {
-  const puppeteer = {
-    headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--no-first-run',
-      '--no-default-browser-check',
-    ],
-  };
-  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-    puppeteer.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-  }
-
-  const client = new Client({
-    authStrategy: new LocalAuth({ dataPath: pastaAuth() }),
-    puppeteer,
-  });
-
-  client.on('qr', (qr) => {
-    botState.definir({ status: 'qr', qr });
-    console.log('\n📱 Novo QR Code gerado. Abra a tela "Conexão do WhatsApp" no app para escanear.');
-    qrcode.generate(qr, { small: true });
-  });
-
-  client.on('authenticated', () => {
-    console.log('🔐 WhatsApp autenticado!');
-    botState.definir({ status: 'iniciando', qr: null });
-  });
-
-  client.on('ready', () => {
-    const numero = client.info && client.info.wid ? client.info.wid.user : null;
-    console.log('✅ Bot do WhatsApp conectado e pronto para atender!\n');
-    botState.definir({ status: 'conectado', qr: null, numero });
-  });
-
-  client.on('auth_failure', (m) => {
-    console.error('❌ Falha de autenticação:', m);
-    botState.definir({ status: 'desconectado', qr: null });
-  });
-
-  client.on('disconnected', (r) => {
-    console.warn('🔌 WhatsApp desconectado:', r);
-    botState.definir({ status: 'desconectado', qr: null, numero: null });
-  });
-
-  async function processarMensagem(msg) {
-    try {
-      if (!msg || msg.fromMe) return;                       // ignora o que o próprio bot envia
-      if (typeof msg.from !== 'string') return;
-      if (msg.from.endsWith('@g.us') || msg.from === 'status@broadcast') return; // ignora grupos/status
-      if (!msg.from.endsWith('@c.us')) return;              // só conversa individual
-
-      const telefone = msg.from;
-      const texto = msg.body || '';
-      console.log('[bot] Mensagem recebida de ' + telefone + ': ' + JSON.stringify(texto));
-
-      const sessao = db.obterSessao(telefone);
-      const { reply, session } = handleMessage(sessao, texto, telefone, api, new Date());
-      if (session) db.salvarSessao(telefone, session);
-      else db.limparSessao(telefone);
-
-      if (reply) {
-        await client.sendMessage(telefone, reply);
-        console.log('[bot] Respondi ' + telefone);
-      }
-    } catch (e) {
-      console.error('[bot] Erro ao processar mensagem:', (e && e.message) ? e.message : e);
-    }
-  }
-
-  // "message_create" é o evento mais confiável nas versões novas (pega recebidas e enviadas;
-  // filtramos as enviadas pelo próprio bot com msg.fromMe acima).
-  client.on('message_create', processarMensagem);
-
-  return client;
-}
-
-function iniciarBot() {
-  let Client, LocalAuth;
+async function iniciarBot() {
+  let baileys, pino;
   try {
-    ({ Client, LocalAuth } = require('whatsapp-web.js'));
+    baileys = await import('@whiskeysockets/baileys'); // Baileys é ESM
+    pino = require('pino');
   } catch (e) {
-    console.error('\n⚠️  whatsapp-web.js não está instalado. Rode "npm install" antes.\n');
+    console.error('\n⚠️  Baileys não está instalado. Rode "npm install".', e && e.message);
     botState.definir({ status: 'desligado' });
     return null;
   }
 
-  let tentativa = 0;
-  const MAX = 8;
+  const makeWASocket = baileys.default || baileys.makeWASocket;
+  const { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = baileys;
 
-  async function tentar() {
-    tentativa++;
-    botState.definir({ status: 'iniciando', qr: null });
-    limparTravas(); // remove locks de container anterior
-    const client = montarClient(Client, LocalAuth);
-    try {
-      await client.initialize();
-    } catch (e) {
-      console.error(`[bot] Erro ao inicializar (tentativa ${tentativa}/${MAX}):`, e.message);
-      try { await client.destroy(); } catch (_) {}
-      if (tentativa < MAX) {
-        const espera = Math.min(5000 * tentativa, 30000);
-        console.log(`[bot] Tentando de novo em ${Math.round(espera / 1000)}s…`);
-        botState.definir({ status: 'iniciando', qr: null });
-        setTimeout(tentar, espera);
+  botState.definir({ status: 'iniciando', qr: null });
+
+  const { state, saveCreds } = await useMultiFileAuthState(pastaAuth());
+
+  // Pega a versão atual do WhatsApp Web automaticamente (evita quebrar a cada update)
+  let version;
+  try { ({ version } = await fetchLatestBaileysVersion()); } catch (_) { version = undefined; }
+
+  const sock = makeWASocket({
+    version,
+    auth: state,
+    printQRInTerminal: false,
+    logger: pino({ level: 'silent' }),
+    browser: ['Villa Real', 'Chrome', '1.0.0'],
+    syncFullHistory: false,
+    markOnlineOnConnect: false,
+  });
+
+  sock.ev.on('creds.update', saveCreds);
+
+  sock.ev.on('connection.update', (u) => {
+    const { connection, lastDisconnect, qr } = u;
+    if (qr) {
+      botState.definir({ status: 'qr', qr });
+      console.log('📱 Novo QR Code gerado. Abra a tela "Conexão do WhatsApp" no app para escanear.');
+    }
+    if (connection === 'open') {
+      const numero = sock.user && sock.user.id ? String(sock.user.id).split(':')[0].split('@')[0] : null;
+      botState.definir({ status: 'conectado', qr: null, numero });
+      console.log('✅ Bot do WhatsApp conectado e pronto para atender! (' + numero + ')');
+    }
+    if (connection === 'close') {
+      const code = lastDisconnect && lastDisconnect.error && lastDisconnect.error.output
+        ? lastDisconnect.error.output.statusCode
+        : null;
+      const deslogado = code === DisconnectReason.loggedOut;
+      console.warn('🔌 Conexão fechada (código ' + code + '). Deslogado: ' + deslogado);
+      if (deslogado) {
+        // Sessão encerrada no celular: apaga a sessão para gerar um QR novo
+        botState.definir({ status: 'desconectado', qr: null, numero: null });
+        try { fs.rmSync(pastaAuth(), { recursive: true, force: true }); } catch (_) {}
+        setTimeout(iniciarBot, 3000);
       } else {
-        console.error('[bot] Não consegui iniciar o WhatsApp após várias tentativas.');
-        botState.definir({ status: 'desconectado', qr: null });
+        // Queda de conexão: reconecta sozinho
+        botState.definir({ status: 'iniciando', qr: null });
+        setTimeout(iniciarBot, 3000);
       }
     }
-  }
+  });
 
-  tentar();
-  return true;
+  sock.ev.on('messages.upsert', async (ev) => {
+    try {
+      if (ev.type !== 'notify') return;
+      for (const m of ev.messages) {
+        if (!m.message || (m.key && m.key.fromMe)) continue;
+        const jid = (m.key && m.key.remoteJid) || '';
+        if (!jid || jid.endsWith('@g.us') || jid === 'status@broadcast' || jid.endsWith('@newsletter')) continue;
+
+        const texto = textoDaMensagem(m);
+        console.log('[bot] Mensagem de ' + jid + ': ' + JSON.stringify(texto));
+
+        const sessao = db.obterSessao(jid);
+        const { reply, session } = handleMessage(sessao, texto, jid, api, new Date());
+        if (session) db.salvarSessao(jid, session);
+        else db.limparSessao(jid);
+
+        if (reply) {
+          await sock.sendMessage(jid, { text: reply });
+          console.log('[bot] Respondi ' + jid);
+        }
+      }
+    } catch (e) {
+      console.error('[bot] Erro ao processar mensagem:', (e && e.message) ? e.message : e);
+    }
+  });
+
+  return sock;
 }
 
 if (require.main === module) {
