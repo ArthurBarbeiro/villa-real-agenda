@@ -13,7 +13,12 @@ const express = require('express');
 const config = require('../config');
 const booking = require('./booking');
 const db = require('./db');
+const botState = require('./botState');
 const { dataLocalISO } = require('./slots');
+
+// Gerador de QR em imagem (opcional — se não estiver instalado, devolvemos o texto)
+let QRCode = null;
+try { QRCode = require('qrcode'); } catch (e) { /* opcional */ }
 
 function criarApp() {
   const app = express();
@@ -31,6 +36,25 @@ function criarApp() {
 
   // Endpoint para o app validar o PIN digitado na aba Agenda
   app.get('/api/admin/verificar', exigirPin, (req, res) => res.json({ ok: true }));
+
+  // Status da conexão do WhatsApp + QR Code (protegido por PIN).
+  // Retorna o QR já como imagem (data URL) para o app só exibir.
+  app.get('/api/admin/whatsapp', exigirPin, async (req, res) => {
+    const estado = botState.obter();
+    let qrImagem = null;
+    if (estado.status === 'qr' && estado.qr && QRCode) {
+      try {
+        qrImagem = await QRCode.toDataURL(estado.qr, { margin: 1, width: 320 });
+      } catch (e) { /* ignora */ }
+    }
+    res.json({
+      status: estado.status,     // desligado | iniciando | qr | conectado | desconectado
+      numero: estado.numero || null,
+      qrImagem,                  // data:image/png;base64,... (quando status = qr)
+      qrTexto: estado.status === 'qr' ? estado.qr : null,
+      botAtivo: process.env.SEM_BOT !== '1',
+    });
+  });
 
   // Informações públicas para o frontend montar a tela
   app.get('/api/config', (req, res) => {

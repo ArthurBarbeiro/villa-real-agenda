@@ -88,6 +88,7 @@ async function tentarEntrar() {
     document.getElementById('barbeiro-lock').classList.add('hidden');
     document.getElementById('barbeiro-conteudo').classList.remove('hidden');
     carregarAgenda();
+    iniciarPollingWhatsApp();
   } catch (e) {
     ADMIN_PIN = null; // senha errada
     err.classList.remove('hidden');
@@ -98,6 +99,40 @@ async function tentarEntrar() {
 
 document.getElementById('pin-entrar').addEventListener('click', tentarEntrar);
 document.getElementById('pin-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') tentarEntrar(); });
+
+// ---------- Conexão do WhatsApp (bot) ----------
+let waPollTimer = null;
+async function carregarWhatsApp() {
+  const box = document.getElementById('wa-conn-body');
+  if (!box) return;
+  try {
+    const d = await api('/api/admin/whatsapp');
+    if (!d.botAtivo) {
+      box.innerHTML = '<p class="muted">O bot está desligado neste servidor no momento.</p>';
+    } else if (d.status === 'conectado') {
+      box.innerHTML = '<p style="color:var(--ok)">✅ WhatsApp conectado' + (d.numero ? ' (' + d.numero + ')' : '') + '.<br>O bot está atendendo os clientes automaticamente.</p>';
+    } else if (d.status === 'qr' && d.qrImagem) {
+      box.innerHTML = '<p class="muted">Escaneie com o WhatsApp que será o bot:<br><small>WhatsApp → Aparelhos conectados → Conectar um aparelho</small></p>'
+        + '<img src="' + d.qrImagem + '" alt="QR Code" style="width:100%;max-width:280px;display:block;margin:10px auto;background:#fff;border-radius:10px;padding:8px" />'
+        + '<p class="muted center" style="font-size:12px">O código se atualiza sozinho. Se sumir, aguarde o próximo aparecer.</p>';
+    } else if (d.status === 'iniciando') {
+      box.innerHTML = '<div class="loader">Iniciando o WhatsApp… aguarde o QR aparecer (pode levar alguns segundos).</div>';
+    } else {
+      box.innerHTML = '<p class="muted">Status: ' + d.status + '. Aguardando conexão…</p>';
+    }
+  } catch (e) {
+    box.innerHTML = '<p class="muted">' + e.message + '</p>';
+  }
+}
+function iniciarPollingWhatsApp() {
+  carregarWhatsApp();
+  clearInterval(waPollTimer);
+  waPollTimer = setInterval(() => {
+    const visivel = !document.getElementById('view-barbeiro').classList.contains('hidden');
+    if (visivel && ADMIN_PIN) carregarWhatsApp();
+    else clearInterval(waPollTimer);
+  }, 4000);
+}
 
 // ============================================================================
 //  FLUXO DO CLIENTE (marcar horário)
