@@ -3,6 +3,8 @@
 //  Rode com:  npm start
 // ============================================================================
 
+process.env.TZ = process.env.TZ || 'America/Sao_Paulo'; // fuso de Brasília
+
 const { iniciarServidor } = require('./server');
 const { iniciarBot } = require('./bot');
 const config = require('../config');

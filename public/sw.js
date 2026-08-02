@@ -1,25 +1,37 @@
-// Service worker simples: cache dos arquivos estáticos para instalar como app.
-// As chamadas de API (/api/...) sempre vão à rede (dados sempre atualizados).
-const CACHE = 'barbearia-agenda-v1';
-const ARQUIVOS = ['.', 'index.html', 'styles.css', 'app.js', 'manifest.json', 'icon.svg', 'icon.png', 'logo.png'];
+// Service worker (PWA). Estratégia "network-first": sempre tenta pegar a versão
+// mais NOVA pela internet e, se estiver offline, cai no que estiver salvo.
+// Isso garante que atualizações do app cheguem aos usuários sem ficar preso em cache.
+const CACHE = 'villa-real-v2';
+const ESSENCIAIS = ['manifest.json', 'icon.svg', 'icon.png', 'logo.png'];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ARQUIVOS)).then(() => self.skipWaiting()));
+  self.skipWaiting();
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ESSENCIAIS)).catch(() => {}));
 });
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then((chaves) => Promise.all(chaves.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())
+    caches.keys()
+      .then((chaves) => Promise.all(chaves.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (url.pathname.startsWith('/api/')) {
-    // Dados: sempre rede
-    e.respondWith(fetch(e.request).catch(() => new Response(JSON.stringify({ erro: 'Sem conexão' }), { status: 503, headers: { 'Content-Type': 'application/json' } })));
+    // Dados: sempre rede (nunca cacheia agendamentos)
+    e.respondWith(fetch(e.request));
     return;
   }
-  // Estáticos: cache primeiro
-  e.respondWith(caches.match(e.request).then((r) => r || fetch(e.request)));
+  // Arquivos do app: rede primeiro, com o cache como reserva pra funcionar offline
+  e.respondWith(
+    fetch(e.request)
+      .then((resp) => {
+        const copia = resp.clone();
+        caches.open(CACHE).then((c) => c.put(e.request, copia)).catch(() => {});
+        return resp;
+      })
+      .catch(() => caches.match(e.request))
+  );
 });

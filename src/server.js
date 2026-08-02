@@ -4,6 +4,10 @@
 //  quanto o bot de WhatsApp usam. Roda junto com o bot no mesmo processo.
 // ============================================================================
 
+// Fuso horário de Brasília (garante que "hoje" e os horários batam com o Brasil,
+// mesmo com o servidor hospedado em outro país).
+process.env.TZ = process.env.TZ || 'America/Sao_Paulo';
+
 const path = require('path');
 const express = require('express');
 const config = require('../config');
