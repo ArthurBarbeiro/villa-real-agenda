@@ -100,21 +100,34 @@ function montarClient(Client, LocalAuth) {
     botState.definir({ status: 'desconectado', qr: null, numero: null });
   });
 
-  client.on('message', async (msg) => {
+  async function processarMensagem(msg) {
     try {
-      if (msg.from.endsWith('@g.us') || msg.from === 'status@broadcast') return;
-      if (msg.fromMe) return;
+      if (!msg || msg.fromMe) return;                       // ignora o que o próprio bot envia
+      if (typeof msg.from !== 'string') return;
+      if (msg.from.endsWith('@g.us') || msg.from === 'status@broadcast') return; // ignora grupos/status
+      if (!msg.from.endsWith('@c.us')) return;              // só conversa individual
+
       const telefone = msg.from;
       const texto = msg.body || '';
+      console.log('[bot] Mensagem recebida de ' + telefone + ': ' + JSON.stringify(texto));
+
       const sessao = db.obterSessao(telefone);
       const { reply, session } = handleMessage(sessao, texto, telefone, api, new Date());
       if (session) db.salvarSessao(telefone, session);
       else db.limparSessao(telefone);
-      if (reply) await msg.reply(reply);
+
+      if (reply) {
+        await client.sendMessage(telefone, reply);
+        console.log('[bot] Respondi ' + telefone);
+      }
     } catch (e) {
-      console.error('[bot] Erro ao processar mensagem:', e);
+      console.error('[bot] Erro ao processar mensagem:', (e && e.message) ? e.message : e);
     }
-  });
+  }
+
+  // "message_create" é o evento mais confiável nas versões novas (pega recebidas e enviadas;
+  // filtramos as enviadas pelo próprio bot com msg.fromMe acima).
+  client.on('message_create', processarMensagem);
 
   return client;
 }
