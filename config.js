@@ -41,7 +41,7 @@ module.exports = {
   // Cada dia pode ter um ou mais blocos (ex.: manhã e tarde, com pausa pro almoço)
   // Se um dia não estiver aqui, está FECHADO.
   horarios: {
-    0: [{ inicio: '09:00', fim: '12:00' }, { inicio: '13:00', fim: '14:00' }], // domingo
+    0: [{ inicio: '09:00', fim: '13:00' }],                                    // domingo (09h–13h, sem pausa de almoço)
     1: [{ inicio: '09:00', fim: '12:00' }, { inicio: '13:00', fim: '19:00' }], // segunda
     2: [{ inicio: '09:00', fim: '12:00' }, { inicio: '13:00', fim: '19:00' }], // terça
     3: [{ inicio: '09:00', fim: '12:00' }, { inicio: '13:00', fim: '19:00' }], // quarta
