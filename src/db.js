@@ -17,6 +17,7 @@ const DEFAULT_DATA = {
   agendamentos: [],   // { id, cliente, telefone, servicoId, servicoNome, data, hora, duracaoMin, status, origem, criadoEm }
   clientes: {},       // telefone -> { nome, telefone }
   sessoes: {},        // telefone -> { estado, dados, atualizadoEm }  (conversas do bot)
+  bloqueios: [],      // dias travados: [{ data: 'YYYY-MM-DD', motivo, criadoEm }]
   contador: 1,        // gera ids sequenciais
 };
 
@@ -104,6 +105,43 @@ function obterCliente(telefone) {
   return data.clientes[telefone] || null;
 }
 
+// ---- Bloqueio de dias (folgas / imprevistos) ----
+// Um dia bloqueado não aparece para o cliente e não aceita novos agendamentos.
+// Não cancela os agendamentos que já existiam nesse dia (o barbeiro decide isso).
+
+function listarBloqueios() {
+  const data = carregar();
+  return (data.bloqueios || []).slice().sort((a, b) => a.data.localeCompare(b.data));
+}
+
+function diaBloqueado(dataStr) {
+  const data = carregar();
+  return (data.bloqueios || []).some((b) => b.data === dataStr);
+}
+
+function bloquearDia(dataStr, motivo) {
+  const data = carregar();
+  if (!data.bloqueios) data.bloqueios = [];
+  const existente = data.bloqueios.find((b) => b.data === dataStr);
+  if (existente) {
+    existente.motivo = motivo || existente.motivo || '';
+    salvar(data);
+    return existente;
+  }
+  const bloqueio = { data: dataStr, motivo: motivo || '', criadoEm: new Date().toISOString() };
+  data.bloqueios.push(bloqueio);
+  salvar(data);
+  return bloqueio;
+}
+
+function desbloquearDia(dataStr) {
+  const data = carregar();
+  const antes = (data.bloqueios || []).length;
+  data.bloqueios = (data.bloqueios || []).filter((b) => b.data !== dataStr);
+  if (data.bloqueios.length !== antes) { salvar(data); return true; }
+  return false;
+}
+
 // ---- Sessões do bot (estado da conversa por telefone) ----
 
 function obterSessao(telefone) {
@@ -134,4 +172,8 @@ module.exports = {
   obterSessao,
   salvarSessao,
   limparSessao,
+  listarBloqueios,
+  diaBloqueado,
+  bloquearDia,
+  desbloquearDia,
 };
