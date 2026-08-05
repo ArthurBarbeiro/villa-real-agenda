@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#14110f" />
+  <title>Faturamento — Villa Real</title>
+  <link rel="apple-touch-icon" href="icon.png" />
+  <style>
+    :root{
+      --bg:#14110f; --surface:#1e1a17; --surface-2:#2a2420; --line:#3a322c;
+      --text:#f4efe9; --muted:#a99f94; --accent:#d9a441; --accent-2:#c48a2c;
+      --ok:#4caf7d; --danger:#e06666; --wpp:#25d366; --radius:14px;
+    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;min-height:100%;}
+    .wrap{max-width:520px;margin:0 auto;min-height:100vh;padding-bottom:40px;}
+    header{padding:20px 18px 14px;text-align:center;border-bottom:1px solid var(--line);
+      background:linear-gradient(160deg,#201b17,#14110f);}
+    header img{max-width:180px;width:62%;height:auto;display:block;margin:0 auto 6px;}
+    header p{margin:0;color:var(--muted);font-size:12.5px;}
+    h1.title{font-size:19px;margin:10px 0 2px;letter-spacing:.3px;}
+    .muted{color:var(--muted);}
+    .center{text-align:center;}
+    .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+      padding:16px;margin:14px 16px 0;box-shadow:0 8px 24px rgba(0,0,0,.35);}
+    .step-title{font-weight:700;margin:0 0 10px;font-size:15px;}
+    label{display:block;font-size:13px;color:var(--muted);margin:10px 0 6px;}
+    input{width:100%;padding:13px;background:var(--surface-2);border:1px solid var(--line);
+      border-radius:12px;color:var(--text);font-size:16px;}
+    .btn{width:100%;padding:13px;border:none;border-radius:12px;background:var(--accent);
+      color:#211a10;font-weight:700;font-size:15px;margin-top:12px;cursor:pointer;}
+    .btn.secondary{background:var(--surface-2);color:var(--text);border:1px solid var(--line);}
+    .hidden{display:none!important;}
+
+    /* KPIs */
+    .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 16px 0;}
+    .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px;}
+    .kpi .label{font-size:11.5px;color:var(--muted);margin:0 0 6px;text-transform:uppercase;letter-spacing:.4px;}
+    .kpi .value{font-size:23px;font-weight:800;line-height:1;}
+    .kpi .sub{font-size:11.5px;color:var(--muted);margin-top:5px;}
+    .kpi.gold .value{color:var(--accent);}
+    .kpi.ok .value{color:var(--ok);}
+
+    /* Toggle */
+    .toggle{display:flex;gap:6px;background:var(--surface-2);border:1px solid var(--line);
+      border-radius:12px;padding:4px;margin-top:12px;}
+    .toggle button{flex:1;padding:9px;border:none;background:transparent;color:var(--muted);
+      font-weight:600;font-size:13.5px;border-radius:9px;cursor:pointer;}
+    .toggle button.active{background:var(--accent);color:#211a10;}
+
+    /* Bar chart */
+    .chart{display:flex;align-items:flex-end;gap:8px;height:180px;margin-top:16px;padding-top:8px;}
+    .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0;}
+    .bar-val{font-size:11px;color:var(--accent);margin-bottom:4px;font-weight:700;white-space:nowrap;}
+    .bar{width:70%;max-width:34px;background:linear-gradient(180deg,var(--accent),var(--accent-2));
+      border-radius:6px 6px 0 0;min-height:3px;transition:height .3s;}
+    .bar.futuro{background:linear-gradient(180deg,#5b5148,#3a322c);}
+    .bar-lbl{font-size:10.5px;color:var(--muted);margin-top:6px;text-align:center;line-height:1.15;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+    .legenda{display:flex;gap:14px;justify-content:center;margin-top:12px;font-size:11.5px;color:var(--muted);}
+    .legenda span{display:inline-flex;align-items:center;gap:5px;}
+    .dot{width:10px;height:10px;border-radius:3px;display:inline-block;}
+
+    /* Horizontal bars (serviços) */
+    .hbar-row{margin-top:12px;}
+    .hbar-top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;}
+    .hbar-top .nome{color:var(--text);}
+    .hbar-top .val{color:var(--accent);font-weight:700;}
+    .hbar-track{background:var(--surface-2);border-radius:6px;height:9px;overflow:hidden;}
+    .hbar-fill{height:100%;background:linear-gradient(90deg,var(--accent-2),var(--accent));border-radius:6px;}
+
+    /* Table */
+    table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px;}
+    th,td{text-align:right;padding:9px 6px;border-bottom:1px solid var(--line);}
+    th:first-child,td:first-child{text-align:left;}
+    th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.3px;}
+    td.per{color:var(--text);}
+    .foot{margin:18px 16px 0;text-align:center;font-size:12px;color:var(--muted);}
+    a.link{color:var(--accent);text-decoration:none;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <img src="logo.png" alt="Villa Real" onerror="this.style.display='none'" />
+      <h1 class="title">Faturamento</h1>
+      <p class="muted">Painel do barbeiro</p>
+    </header>
+
+    <!-- PIN -->
+    <div id="lock" class="card">
+      <p class="step-title">🔒 Área do barbeiro</p>
+      <p class="muted" style="font-size:13px">Digite a senha para ver o faturamento.</p>
+      <label>Senha</label>
+      <input type="password" id="pin" inputmode="numeric" placeholder="••••" autocomplete="off" />
+      <button class="btn" id="entrar">Entrar</button>
+      <p id="erro" class="muted hidden" style="color:var(--danger)">Senha incorreta. Tente de novo.</p>
+    </div>
+
+    <!-- Conteúdo -->
+    <div id="conteudo" class="hidden">
+      <div id="kpis" class="kpis"></div>
+
+      <div class="card">
+        <p class="step-title">📈 Faturamento por período</p>
+        <div class="toggle" id="toggle">
+          <button data-g="semana">Semanal</button>
+          <button data-g="quinzena" class="active">Quinzenal</button>
+          <button data-g="mes">Mensal</button>
+        </div>
+        <div id="chart" class="chart"></div>
+        <div class="legenda">
+          <span><i class="dot" style="background:var(--accent)"></i> Realizado</span>
+          <span><i class="dot" style="background:#5b5148"></i> Agendado (a receber)</span>
+        </div>
+        <div id="tabela"></div>
+      </div>
+
+      <div class="card">
+        <p class="step-title">✂️ Serviços que mais faturam</p>
+        <div id="servicos"></div>
+      </div>
+
+      <div class="card">
+        <p class="step-title">📲 Origem dos agendamentos</p>
+        <div id="origem"></div>
+      </div>
+
+      <p class="foot">
+        Atualizado <span id="quando"></span> · <a class="link" href="index.html">← voltar ao app</a>
+        · <a class="link" href="#" id="recarregar">atualizar</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    var PIN=null, PRECOS={}, AGS=[], GRAN='quinzena';
+    var MES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+    var MESL=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+    function reais(v){return 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+    function reaisCurto(v){
+      v=Number(v||0);
+      if(v>=1000) return 'R$'+(v/1000).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'k';
+      return 'R$'+v.toLocaleString('pt-BR',{maximumFractionDigits:0});
+    }
+    function hojeISO(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+    function parseD(s){var p=s.split('-').map(Number);return new Date(p[0],p[1]-1,p[2]);}
+    function segundaDa(dt){var d=new Date(dt);var dow=(d.getDay()+6)%7;d.setDate(d.getDate()-dow);return d;}
+    function iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+
+    // chave + rótulo do balde conforme granularidade
+    function balde(dataStr){
+      var d=parseD(dataStr);
+      if(GRAN==='mes'){
+        return {chave:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), rotulo:MES[d.getMonth()]+'/'+String(d.getFullYear()).slice(2), ord:d.getFullYear()*100+d.getMonth()};
+      }
+      if(GRAN==='quinzena'){
+        var q=d.getDate()<=15?1:2;
+        return {chave:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-q'+q,
+          rotulo:q+'ªq '+MES[d.getMonth()], ord:d.getFullYear()*1000+d.getMonth()*10+q};
+      }
+      // semana (segunda a domingo)
+      var seg=segundaDa(d);
+      return {chave:iso(seg), rotulo:String(seg.getDate()).padStart(2,'0')+'/'+String(seg.getMonth()+1).padStart(2,'0'), ord:seg.getTime()};
+    }
+
+    function agrupar(){
+      var hoje=hojeISO();
+      var mapa={};
+      AGS.forEach(function(a){
+        var b=balde(a.data);
+        if(!mapa[b.chave]) mapa[b.chave]={rotulo:b.rotulo,ord:b.ord,realizado:0,futuro:0,qtd:0,qtdReal:0};
+        var preco=PRECOS[a.servicoId]||0;
+        mapa[b.chave].qtd++;
+        if(a.data<=hoje){ mapa[b.chave].realizado+=preco; mapa[b.chave].qtdReal++; }
+        else { mapa[b.chave].futuro+=preco; }
+      });
+      var arr=Object.keys(mapa).map(function(k){return mapa[k];});
+      arr.sort(function(x,y){return x.ord-y.ord;});
+      var lim=GRAN==='semana'?8:6;
+      return arr.slice(-lim);
+    }
+
+    function renderKPIs(){
+      var hoje=hojeISO();
+      var ini=new Date(); var mesIni=ini.getFullYear()+'-'+String(ini.getMonth()+1).padStart(2,'0');
+      var totReal=0, totFut=0, qtdReal=0, mesReal=0, qtdMes=0;
+      AGS.forEach(function(a){
+        var p=PRECOS[a.servicoId]||0;
+        if(a.data<=hoje){ totReal+=p; qtdReal++; if(a.data.slice(0,7)===mesIni){mesReal+=p;qtdMes++;} }
+        else { totFut+=p; }
+      });
+      var ticket=qtdReal?totReal/qtdReal:0;
+      var el=document.getElementById('kpis');
+      el.innerHTML=
+        kpi('Faturamento realizado', reais(totReal), qtdReal+' atendimento(s)', 'gold')+
+        kpi('Ticket médio', reais(ticket), 'por atendimento', 'ok')+
+        kpi('Este mês ('+MES[ini.getMonth()]+')', reais(mesReal), qtdMes+' atendimento(s)', '')+
+        kpi('Agendado a receber', reais(totFut), 'horários futuros', '');
+    }
+    function kpi(label,value,sub,cls){
+      return '<div class="kpi '+cls+'"><p class="label">'+label+'</p><div class="value">'+value+'</div><div class="sub">'+sub+'</div></div>';
+    }
+
+    function renderChart(){
+      var dados=agrupar();
+      var chart=document.getElementById('chart');
+      var tab=document.getElementById('tabela');
+      if(!dados.length){ chart.innerHTML='<p class="muted center" style="width:100%">Sem dados ainda.</p>'; tab.innerHTML=''; return; }
+      var max=0; dados.forEach(function(d){var t=d.realizado+d.futuro; if(t>max)max=t;});
+      max=max||1;
+      chart.innerHTML=dados.map(function(d){
+        var tot=d.realizado+d.futuro;
+        var hReal=Math.round(d.realizado/max*150);
+        var hFut=Math.round(d.futuro/max*150);
+        var barras='';
+        if(hFut>0) barras+='<div class="bar futuro" style="height:'+hFut+'px"></div>';
+        barras+='<div class="bar" style="height:'+hReal+'px;border-radius:'+(hFut>0?'0':'6px 6px 0 0')+'"></div>';
+        return '<div class="bar-col"><div class="bar-val">'+(tot>0?reaisCurto(tot):'')+'</div>'+
+          '<div style="width:70%;max-width:34px;display:flex;flex-direction:column;justify-content:flex-end">'+barras+'</div>'+
+          '<div class="bar-lbl">'+d.rotulo+'</div></div>';
+      }).join('');
+      // tabela
+      var rows=dados.slice().reverse().map(function(d){
+        var tk=d.qtdReal?d.realizado/d.qtdReal:0;
+        return '<tr><td class="per">'+d.rotulo+'</td><td>'+reais(d.realizado)+'</td><td>'+d.qtd+'</td><td>'+reais(tk)+'</td></tr>';
+      }).join('');
+      tab.innerHTML='<table><thead><tr><th>Período</th><th>Faturado</th><th>Atend.</th><th>Ticket</th></tr></thead><tbody>'+rows+'</tbody></table>';
+    }
+
+    function renderServicos(){
+      var hoje=hojeISO();
+      var mapa={};
+      AGS.forEach(function(a){
+        if(a.data>hoje) return; // só realizado
+        var p=PRECOS[a.servicoId]||0;
+        if(!mapa[a.servicoNome]) mapa[a.servicoNome]={fat:0,qtd:0};
+        mapa[a.servicoNome].fat+=p; mapa[a.servicoNome].qtd++;
+      });
+      var arr=Object.keys(mapa).map(function(k){return {nome:k,fat:mapa[k].fat,qtd:mapa[k].qtd};});
+      arr.sort(function(x,y){return y.fat-x.fat;});
+      arr=arr.slice(0,6);
+      var el=document.getElementById('servicos');
+      if(!arr.length){ el.innerHTML='<p class="muted center">Sem dados ainda.</p>'; return; }
+      var max=arr[0].fat||1;
+      el.innerHTML=arr.map(function(s){
+        return '<div class="hbar-row"><div class="hbar-top"><span class="nome">'+s.nome+' <span class="muted">('+s.qtd+')</span></span>'+
+          '<span class="val">'+reais(s.fat)+'</span></div>'+
+          '<div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(s.fat/max*100)+'%"></div></div></div>';
+      }).join('');
+    }
+
+    function renderOrigem(){
+      var hoje=hojeISO();
+      var wpp={fat:0,qtd:0}, balcao={fat:0,qtd:0};
+      AGS.forEach(function(a){
+        if(a.data>hoje) return;
+        var p=PRECOS[a.servicoId]||0;
+        if(a.origem==='whatsapp'){wpp.fat+=p;wpp.qtd++;} else {balcao.fat+=p;balcao.qtd++;}
+      });
+      var tot=wpp.fat+balcao.fat||1;
+      var el=document.getElementById('origem');
+      el.innerHTML=
+        linhaOrigem('🤖 WhatsApp (bot)', wpp, tot, 'var(--wpp)')+
+        linhaOrigem('🧑 Balcão / manual', balcao, tot, 'var(--accent)');
+    }
+    function linhaOrigem(nome,o,tot,cor){
+      return '<div class="hbar-row"><div class="hbar-top"><span class="nome">'+nome+' <span class="muted">('+o.qtd+')</span></span>'+
+        '<span class="val" style="color:'+cor+'">'+reais(o.fat)+'</span></div>'+
+        '<div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(o.fat/tot*100)+'%;background:'+cor+'"></div></div></div>';
+    }
+
+    function renderTudo(){
+      renderKPIs(); renderChart(); renderServicos(); renderOrigem();
+      var d=new Date();
+      document.getElementById('quando').textContent=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    }
+
+    async function carregar(){
+      var servicos=await fetch('/api/servicos',{cache:'no-store'}).then(function(r){return r.json();});
+      PRECOS={}; servicos.forEach(function(s){PRECOS[s.id]=s.preco;});
+      AGS=await fetch('/api/agendamentos?de=2020-01-01',{headers:{'x-admin-pin':PIN},cache:'no-store'}).then(function(r){return r.json();});
+      renderTudo();
+    }
+
+    async function entrar(){
+      var v=(document.getElementById('pin').value||'').trim();
+      if(!v) return;
+      PIN=v;
+      try{
+        var r=await fetch('/api/admin/verificar',{headers:{'x-admin-pin':PIN}});
+        if(!r.ok) throw new Error('pin');
+        document.getElementById('lock').classList.add('hidden');
+        document.getElementById('conteudo').classList.remove('hidden');
+        await carregar();
+      }catch(e){
+        PIN=null;
+        document.getElementById('erro').classList.remove('hidden');
+        document.getElementById('pin').value='';
+      }
+    }
+
+    document.getElementById('entrar').addEventListener('click',entrar);
+    document.getElementById('pin').addEventListener('keydown',function(e){if(e.key==='Enter')entrar();});
+    document.getElementById('toggle').addEventListener('click',function(e){
+      var b=e.target.closest('button'); if(!b) return;
+      GRAN=b.getAttribute('data-g');
+      [].forEach.call(this.querySelectorAll('button'),function(x){x.classList.toggle('active',x===b);});
+      renderChart();
+    });
+    document.getElementById('recarregar').addEventListener('click',function(e){e.preventDefault();carregar();});
+  </script>
+</body>
+</html>
