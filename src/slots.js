@@ -75,7 +75,13 @@ function horariosDisponiveis(dataStr, duracaoMin, agendamentos, config, agora = 
     .filter((a) => a.status === 'confirmado' && a.data === dataStr)
     .map((a) => {
       const ini = horaParaMin(a.hora);
-      return { ini, fim: ini + (a.duracaoMin || config.regras.intervaloSlotMin) };
+      // Usa a duracao ATUAL do servico (do config), nao a que ficou gravada no
+      // agendamento. Assim, se o barbeiro encurtou um servico (ex.: degrade de
+      // 40 para 30 min), os agendamentos antigos deixam de bloquear o horario
+      // seguinte. Cai para a duracao gravada, ou o passo do slot, se nao achar.
+      const serv = (config.servicos || []).find((x) => x.id === a.servicoId);
+      const dur = (serv && serv.duracaoMin) || a.duracaoMin || config.regras.intervaloSlotMin;
+      return { ini, fim: ini + dur };
     });
 
   // Limite de antecedência mínima (só se o dia for hoje)
