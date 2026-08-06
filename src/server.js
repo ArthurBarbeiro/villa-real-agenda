@@ -24,6 +24,16 @@ function criarApp() {
   const app = express();
   app.use(express.json());
 
+  // Nunca deixar o navegador/celular guardar cache das respostas da API.
+  // Sem isso, o cliente pode ver um horário JÁ OCUPADO como se estivesse livre
+  // (lista antiga em cache). Força sempre buscar os dados atualizados.
+  app.use('/api', (req, res, next) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    next();
+  });
+
   // ---- API ----
 
   // Middleware de segurança: exige o PIN do barbeiro no cabeçalho "x-admin-pin".
