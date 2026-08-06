@@ -54,7 +54,7 @@ module.exports = {
   regras: {
     intervaloSlotMin: 30,      // de quantos em quantos minutos os horários aparecem
     diasParaFrente: 14,        // quantos dias à frente o cliente pode marcar
-    antecedenciaMinutosMin: 60,// não deixa marcar com menos de X minutos de antecedência
+    antecedenciaMinutosMin: 15,// não deixa marcar com menos de X minutos de antecedência
     maxAgendamentosPorCliente: 3, // limite de horários futuros por cliente (anti-abuso)
   },
 
