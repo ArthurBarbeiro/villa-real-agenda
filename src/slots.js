@@ -81,8 +81,9 @@ function horariosDisponiveis(dataStr, duracaoMin, agendamentos, config, agora = 
   // Limite de antecedência mínima (só se o dia for hoje)
   const hojeStr = dataLocalISO(agora);
   const ehHoje = dataStr === hojeStr;
+  const pAgora = partesBrasilia(agora);
   const minAgoraComAntecedencia = ehHoje
-    ? agora.getHours() * 60 + agora.getMinutes() + config.regras.antecedenciaMinutosMin
+    ? pAgora.hora * 60 + pAgora.min + config.regras.antecedenciaMinutosMin
     : -Infinity;
 
   const livres = [];
@@ -103,12 +104,30 @@ function horariosDisponiveis(dataStr, duracaoMin, agendamentos, config, agora = 
   return livres;
 }
 
-// Data local (do computador) em 'YYYY-MM-DD'
+// Partes de data/hora SEMPRE no fuso de Brasília, independente do fuso do servidor.
+// O Railway roda em UTC; sem isso, "hoje" e a antecedência mínima saíam 3h
+// adiantados e derrubavam os horários do fim do dia (ex.: 18h/19h).
+function partesBrasilia(d = new Date()) {
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+  const p = {};
+  for (const parte of fmt.formatToParts(d)) p[parte.type] = parte.value;
+  return {
+    ano: p.year,
+    mes: p.month,
+    dia: p.day,
+    hora: parseInt(p.hour, 10) % 24, // "24" vira 0 à meia-noite
+    min: parseInt(p.minute, 10),
+  };
+}
+
+// Data local (no fuso de Brasília) em 'YYYY-MM-DD'
 function dataLocalISO(d = new Date()) {
-  const ano = d.getFullYear();
-  const mes = String(d.getMonth() + 1).padStart(2, '0');
-  const dia = String(d.getDate()).padStart(2, '0');
-  return `${ano}-${mes}-${dia}`;
+  const p = partesBrasilia(d);
+  return `${p.ano}-${p.mes}-${p.dia}`;
 }
 
 // Soma dias a uma data 'YYYY-MM-DD'
