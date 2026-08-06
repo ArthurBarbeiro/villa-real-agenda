@@ -19,11 +19,11 @@ module.exports = {
   // preco = em reais (só exibição)
   servicos: [
     { id: 'corte_social',  nome: 'Corte social',            duracaoMin: 30, preco: 35 },
-    { id: 'corte_tesoura', nome: 'Corte social na tesoura', duracaoMin: 40, preco: 45 },
-    { id: 'corte_degrade', nome: 'Corte degradê',           duracaoMin: 40, preco: 45,
+    { id: 'corte_tesoura', nome: 'Corte social na tesoura', duracaoMin: 30, preco: 45 },
+    { id: 'corte_degrade', nome: 'Corte degradê',           duracaoMin: 30, preco: 45,
       descricao: 'Low, Mid, High, Buzz, Mullet, Moicano, Americano, Tap, Sufista' },
-    { id: 'corte_barba',            nome: 'Corte e barba',              duracaoMin: 40, preco: 70 },
-    { id: 'corte_sobrancelha',      nome: 'Corte e sobrancelha',        duracaoMin: 40, preco: 55 },
+    { id: 'corte_barba',            nome: 'Corte e barba',              duracaoMin: 30, preco: 70 },
+    { id: 'corte_sobrancelha',      nome: 'Corte e sobrancelha',        duracaoMin: 30, preco: 55 },
     { id: 'corte_barba_sobrancelha',nome: 'Corte, barba e sobrancelha', duracaoMin: 60, preco: 80 },
     { id: 'barba',         nome: 'Barba simples',           duracaoMin: 20, preco: 30 },
     { id: 'barboterapia',  nome: 'Barboterapia',            duracaoMin: 40, preco: 70 },
