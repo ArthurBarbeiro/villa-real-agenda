@@ -13,6 +13,7 @@ async function api(caminho, opcoes) {
   if (ADMIN_PIN) headers['x-admin-pin'] = ADMIN_PIN; // envia o PIN nas rotas protegidas
   const r = await fetch(API + caminho, {
     headers,
+    cache: 'no-store', // sempre buscar dados atualizados (evita ver horário ocupado como livre)
     ...opcoes,
   });
   if (!r.ok) {
